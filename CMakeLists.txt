@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.13)
 
 project(attention-system-rknn-client LANGUAGES C CXX)
 
+option(BUILD_FOR_ARM32 "Build for ARM 32-bit architecture" OFF)
+option(BUILD_FOR_AMD64 "Build for AMD64/x86_64 architecture" OFF)
+
+# Check if exactly one option is selected
+if((BUILD_FOR_ARM32 AND BUILD_FOR_AMD64) OR (NOT BUILD_FOR_ARM32 AND NOT BUILD_FOR_AMD64))
+    message(FATAL_ERROR "You must select exactly one architecture (BUILD_FOR_ARM32 or BUILD_FOR_AMD64).")
+endif()
+
+if(BUILD_FOR_AMD64)
+
 set_target_properties( PROPERTIES
     CXX_STANDARD 17
 )
@@ -64,3 +74,38 @@ target_link_libraries(app
 
 	${OPENSSL_LIBRARIES}
 )
+
+elseif(BUILD_FOR_ARM32)
+
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR arm32)
+set(CMAKE_SYSROOT /home/chen/gcc-arm-11.2-2022.02-x86_64-arm-none-linux-gnueabihf/arm-none-linux-gnueabihf/libc)
+list(APPEND CMAKE_FIND_ROOT_PATH ${CMAKE_SYSROOT})
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+set(ENV{PKG_CONFIG_SYSROOT_DIR} "${CMAKE_SYSROOT}")
+set(ENV{PKG_CONFIG_LIBDIR} "${CMAKE_SYSROOT}/usr/lib/pkgconfig:${CMAKE_SYSROOT}/usr/share/pkgconfig")
+set(ENV{PKG_CONFIG_PATH} "")
+
+set(CMAKE_C_COMPILER   ${CMAKE_SYSROOT}/../../bin/arm-none-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER ${CMAKE_SYSROOT}/../../bin/arm-none-linux-gnueabihf-g++)
+
+find_package(OpenSSL REQUIRED)
+
+add_executable(arm32-app
+	arm32_test.cpp
+)
+
+target_include_directories(arm32-app PUBLIC
+	${OPENSSL_INCLUDE_DIRS}
+)
+
+target_link_libraries(arm32-app
+	${OPENSSL_LIBRARIES}
+)
+
+endif()
